@@ -4,15 +4,13 @@
 
 /**
  * Jordyn Hatcher
- * Jacob Hatcher
- * Professor Zuidema
- * EGR 226-902
- * Lab 6 Part 1
- * Description: This code sets up the LCD and has
- * a cursor blinking in the top left corner.
+ * Jacob Arenz
+ * Final Project
+ * Description: Alarm Clock gbdfi
  *
- * Cited from Zuidema's and Brakora's  lecture
+ * Cited from Zuidema's and Brakora's lecture
  */
+
 void LCD_init(void); // makes the cursor blink
 
 void commandWrite(uint8_t command); //writing one byte of command by calling the pushByte() function with the command parameter
