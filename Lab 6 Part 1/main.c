@@ -6,9 +6,18 @@
  * Jordyn Hatcher
  * Jacob Hatcher
  * Professor Zuidema
+ * Final Project
+ * Description:
  *
  * Cited from Zuidema's and Brakora's  lecture
  */
+
+
+
+
+
+
+
 void LCD_init(void); // makes the cursor blink
 
 void commandWrite(uint8_t command); //writing one byte of command by calling the pushByte() function with the command parameter
