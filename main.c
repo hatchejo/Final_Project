@@ -6,7 +6,7 @@
  * Jordyn Hatcher
  * Jacob Arenz
  * Final Project
- * Description: Alarm Clock gbdfi
+ * Description: Alarm Clock
  *
  * Cited from Zuidema's and Brakora's lecture
  */

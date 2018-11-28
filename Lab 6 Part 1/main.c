@@ -6,10 +6,6 @@
  * Jordyn Hatcher
  * Jacob Hatcher
  * Professor Zuidema
- * EGR 226-902
- * Lab 6 Part 1
- * Description: This code sets up the LCD and has
- * a cursor blinking in the top left corner.
  *
  * Cited from Zuidema's and Brakora's  lecture
  */
