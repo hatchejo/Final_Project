@@ -11,53 +11,49 @@
  *
  * Cited from Zuidema's and Brakora's  lecture
  */
-
-
-
-
-
-
-
+//void LCD_pins_init(void);
 void LCD_init(void); // makes the cursor blink
-
 void commandWrite(uint8_t command); //writing one byte of command by calling the pushByte() function with the command parameter
 void dataWrite(uint8_t data); //writing one byte of data by calling the pushByte() function with the data parameter
-
 void pushByte(uint8_t byte);    // First pushes the most significant 4 bits of the byte into the data pins by calling the pushNibble() function
 //next, it pushes the least significant 4 bits onto the data pins by calling the pushNibble() function
-
 void pushNibble(uint8_t nibble);    //pushes 1 nibble onto the data pins and pulses the enable pin
-
-
 void PulseEnablePin (void);     //This function will sequence the enable (E) pin
-
-
 void delay_micro(uint32_t microsec);    //SysTick timer generates delay in microseconds
 void delay_milli(uint32_t milli);     //SysTick timer generates delay in milliseconds
-
-
-
-
-
 void SysTick_Init(void); // function that initializes the SysTick Timer
 
 
+
+
+/************************************************************************************************/
 void main(void)
 {
     WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;  // stop watchdog timer
-    SysTick_Init(); //calls SysTick initialization function
+
     P4->SEL0 &= ~(BIT0 | BIT2 | BIT4 | BIT5 | BIT6 | BIT7);  //sets port 4 pins for GPIO
     P4->SEL1 &= ~(BIT0 | BIT2 | BIT4 | BIT5 | BIT6 | BIT7);  //sets port 4 pins for GPIO
     P4->DIR |= (BIT0 | BIT2 | BIT4 | BIT5 | BIT6 |BIT7); //makes these pins outputs (port pins P4.4 - P4.7 wired to DB4-DB7)
 
+    //LCD_pins_init(); //intializes LCD port pins
     LCD_init(); //calls this function
+    SysTick_Init(); //calls SysTick initialization function
+
 
     while(1) //keeps going through the function
     {
 
     }
 }
+/************************************************************************************************/
 
+
+//void LCD_pins_init()
+//{
+//    P4->SEL0 &= ~(BIT0 | BIT2 | BIT4 | BIT5 | BIT6 | BIT7);  //sets port 4 pins for GPIO
+//    P4->SEL1 &= ~(BIT0 | BIT2 | BIT4 | BIT5 | BIT6 | BIT7);  //sets port 4 pins for GPIO
+//    P4->DIR |= (BIT0 | BIT2 | BIT4 | BIT5 | BIT6 |BIT7); //makes these pins outputs (port pins P4.4 - P4.7 wired to DB4-DB7)
+//}
 
 
 void  LCD_init() //this function makes the cursor blink
