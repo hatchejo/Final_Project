@@ -382,10 +382,36 @@ void set_time(void) //white button
 void main_state(void) //black button if necessary
 {
 
-    if(!(P2->IN & BIT3)) //if statement for the light button
-    {
-        current_alarm_state = ALARM_ON;
-    }
+//     if(!(P2->IN & BIT3)) //if statement for the light button
+//     {
+//         current_alarm_state = ALARM_ON;
+//     }
+      if(P2->IN & BIT3) //if statement for the light button
+  {
+      pctr++;
+
+      if(pctr % 2 == 1)
+      {
+          commandWrite(0xC0);
+          delay_micro(10);
+          for(x=0; x<10; x++)
+              {
+                dataWrite(alarm_on[x]);
+                //delay_milli(100);
+              }
+      }
+
+      if(pctr % 2 == 0)
+      {
+          commandWrite(0xC0);
+          delay_micro(10);
+              for(x=0; x<10; x++)
+              {
+                  dataWrite(alarm_off[x]);
+                  //delay_milli(100);
+              }
+      }
+      }
 
     if(!(P2->IN & BIT5)) //if statement for the light button
     {
