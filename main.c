@@ -259,46 +259,7 @@ void main(void)
 /************************************************************************************************************************************************/
 void PORT2_IRQHandler(void)
 {
-//   if(P2->IFG & BIT3) //if statement for the light button
-//   {
-//       pctr++;
-//
-//       if(pctr % 2 == 1)
-//       {
-//           commandWrite(0xC0);
-//           delay_micro(10);
-//           for(x=0; x<10; x++)
-//               {
-//                 dataWrite(alarm_on[x]);
-//                 //delay_milli(100);
-//               }
-//       }
-//
-//       if(pctr % 2 == 0)
-//       {
-//           commandWrite(0xC0);
-//           delay_micro(10);
-//               for(x=0; x<10; x++)
-//               {
-//                   dataWrite(alarm_off[x]);
-//                   //delay_milli(100);
-//               }
-//       }
-//       P2->IFG &= ~BIT3; //clears the flag before exiting interrupt
-//   }
-//
-//   if(P2->IFG & BIT4)
-//   {
-//
-//              commandWrite(0xC0);
-//              delay_micro(10);
-//              for(x=0; x<11; x++)
-//                  {
-//                    dataWrite(alarm_snooze[x]);
-//                    //delay_milli(100);
-//                  }
-//          P2->IFG &= ~BIT4; //clears the flag before exiting interrupt
-//      }
+
 
 }
 /************************************************************************************************************************************************/
@@ -382,44 +343,15 @@ void set_time(void) //white button
 void main_state(void) //black button if necessary
 {
 
-//     if(!(P2->IN & BIT3)) //if statement for the light button
-//     {
-//         current_alarm_state = ALARM_ON;
-//     }
-      if(P2->IN & BIT3) //if statement for the light button
-  {
-      pctr++;
-
-      if(pctr % 2 == 1)
-      {
-          commandWrite(0xC0);
-          delay_micro(10);
-          for(x=0; x<10; x++)
-              {
-                dataWrite(alarm_on[x]);
-                //delay_milli(100);
-              }
-      }
-
-      if(pctr % 2 == 0)
-      {
-          commandWrite(0xC0);
-          delay_micro(10);
-              for(x=0; x<10; x++)
-              {
-                  dataWrite(alarm_off[x]);
-                  //delay_milli(100);
-              }
-      }
-      }
-
     if(!(P2->IN & BIT5)) //if statement for the light button
     {
+        delay_milli(100);
         current_clock_state = SET_TIME;
     }
 
     if(!(P2->IN & BIT6)) //if statement for the light button
     {
+        delay_milli(100);
         current_clock_state = SET_ALARM;
     }
 
@@ -439,12 +371,16 @@ void alarm_on_func(void)
         }
         delay_micro(10);
 
+
         if(!(P2->IN & BIT4))
             {
+            delay_milli(100);
             current_alarm_state = ALARM_SNOOZE;
             }
+
         if(!(P2->IN & BIT3))
             {
+            delay_milli(100);
             current_alarm_state = ALARM_OFF;
             }
 
@@ -465,8 +401,10 @@ void alarm_off_func(void)
         }
         delay_micro(10);
 
+
         if(!(P2->IN & BIT3))
             {
+            delay_milli(100);
             current_alarm_state = ALARM_ON;
             }
 
@@ -487,6 +425,7 @@ void alarm_snooze_func(void)
 
         if(!(P2->IN & BIT3))
             {
+            delay_milli(100);
             current_alarm_state = ALARM_OFF;
             }
 
