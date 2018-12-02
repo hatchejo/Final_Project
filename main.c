@@ -214,19 +214,24 @@ void main(void)
             break;
 
         case SET_TIME:
-            printRTC();
+            //printRTC();
+//            P2->IES |= (BIT5); //set P2.5's Interrupt to trigger when it goes from high to low //right now dsabled
+//            P2->IE |= (BIT5); //set interrupt on for P2.5
+//            P2->IFG &= ~(BIT5); //clear flag before exiting the interrupt
+
+            set_time();
 
             if(hours > 23)
             {
               hours = 0;
             }
 
-            if(!(P2->IN & BIT5)) //if statement for the light button
-            {
-                delay_milli(100);
-                current_clock_state = MAIN;
-            }
-            set_time();
+//            if(!(P2->IN & BIT5)) //if statement for the light button
+//            {
+//                delay_milli(100);
+//                current_clock_state = MAIN;
+//            }
+
 
         case SET_ALARM:
             if(!(P2->IN & BIT6)) //if statement for the light button
@@ -338,6 +343,16 @@ void main(void)
 void PORT2_IRQHandler(void)
 {
 
+        if(P2->IFG & BIT5)//conditional to see if set time button has been pressed
+        {
+            ctrA++;//increment set time global variable
+
+
+            if(ctrA > 5)//if button has been pressed more than 3 times
+            {
+              ctrA = 0;//reset number of presses to zero
+            }
+        }
 
 }
 /************************************************************************************************************************************************/
@@ -416,15 +431,10 @@ void set_alarm(void) //blue button
 /************************************************************************************************************************************************/
 void set_time(void)
 {
-//    if(P2->IN & BIT5)//conditional to see if set time button has been pressed
-//    {
-//        ctrA++;//increment set time global variable
-//
-//        if(ctrA > 3)//if button has been pressed more than 3 times
-//        {
-//          ctrA = 0;//reset number of presses to zero
-//        }
-//    }
+
+    P2->IES |= (BIT5); //set P2.5's Interrupt to trigger when it goes from high to low //right now dsabled
+    P2->IE |= (BIT5); //set interrupt on for P2.5
+    P2->IFG &= ~(BIT5); //clear flag before exiting the interrupt
 
     char current_time[9];//current time array
     char set_hour[9];//used to set hour
@@ -446,7 +456,7 @@ void set_time(void)
         delay_milli(100);//delay 100 milliseconds between digits
     }
 
-    if(ctrA == 1)//conditional to check if set time button has been pressed once
+    if(ctrA == 3)//conditional to check if set time button has been pressed once
     {
         commandWrite(0x83);//command cursor to go to first line of LCD
         delay_milli(100);//delay 100 milliseconds
@@ -456,7 +466,7 @@ void set_time(void)
             delay_milli(100);//delay 100 milliseconds between digits
         }
     }
-    else if(ctrA == 2)
+    else if(ctrA == 4)
     {
         commandWrite(0x83);//command cursor to go to first line of LCD
         delay_milli(100);//delay 100 milliseconds
@@ -491,7 +501,7 @@ void set_time(void)
         }
     }
 
-    if(ctrA == 3)
+    if(ctrA == 5)
                 {
                     current_clock_state= MAIN;
                 }//update state to current time
@@ -624,9 +634,9 @@ void alarm_snooze_func(void)
         P2->DIR &= ~(BIT3); //set P2.3 as an Input
         P2->REN |= (BIT3); //enable pull-up resistor (P2.3 output high)
         P2->OUT |= (BIT3); //make P2.3 default to a '1'
-        //P2->IES |= (BIT3); //set P2.3's Interrupt to trigger when it goes from high to low
-        P2->IE &= ~(BIT3); //set interrupt on for P2.3
-        //P2->IFG &= ~(BIT3); //clear flag before exiting the interrupt
+        P2->IES |= (BIT3); //set P2.3's Interrupt to trigger when it goes from high to low
+        P2->IE &= ~(BIT3); //set interrupt on for P2.3 right now it is disabled
+        P2->IFG &= ~(BIT3); //clear flag before exiting the interrupt
     }
 /************************************************************************************************************************************************/
 
@@ -641,8 +651,8 @@ void alarm_snooze_func(void)
          P2->DIR &= ~(BIT4); //set P2.4 as an Input
          P2->REN |= (BIT4); //enable pull-up resistor (P2.4 output high)
          P2->OUT |= (BIT4); //make P2.4 default to a '1'
-        // P2->IES |= (BIT4); //set P2.4's Interrupt to trigger when it goes from high to low
-         P2->IE &= ~(BIT4); //set interrupt on for P2.4
+         //P2->IES |= (BIT4); //set P2.4's Interrupt to trigger when it goes from high to low
+         //P2->IE &= ~(BIT4); //set interrupt on for P2.4 rn its disabled
          //P2->IFG &= ~(BIT4); //clear flag before exiting the interrupt
       }
 /************************************************************************************************************************************************/
@@ -658,6 +668,9 @@ void button_white_init(void)
     P2->DIR &= ~(BIT5); //set P2.5 as an Input
     P2->REN |= (BIT5); //enable pull-up resistor
     P2->OUT |= (BIT5); //make P2.5 equal to 1
+   // P2->IES &= ~(BIT5); //set P2.5's Interrupt to trigger when it goes from high to low //right now dsabled
+   // P2->IE &= ~(BIT5); //set interrupt on for P2.5 rn its disabled
+    //P2->IFG &= ~(BIT5); //clear flag before exiting the interrupt
 }
 /************************************************************************************************************************************************/
 
