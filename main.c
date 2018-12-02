@@ -99,9 +99,8 @@ char alarm_off[6] = "OFF   ";
 char alarm_snooze[6] = "SNOOZE";
 char alarm_time[9] = "Alarm at:";
 
-//testers
-char juicy[16] = "JUICY      BOOTY";
-char gucci[16] = "GUCCI BOOTY";
+
+
 enum clock_states{
 SET_TIME,
 SET_ALARM,
@@ -120,8 +119,15 @@ ALARM_SNOOZE
 /* GLOABL VARIABLES */
 /************************************************************************************************************************************************/
 uint8_t x, value = 0;
-volatile int pctr = 0;
-//volatile int ctr = 0;
+volatile int ctrA = 0;
+volatile int ctrB = 0;
+volatile int ctrC = 0;
+volatile int ctrD = 0;
+
+volatile int hours = 0;
+volatile int minutes = 0;
+volatile int alarm_hours = 01;
+volatile int alarm_minutes = 00;
 
 
 
@@ -175,17 +181,59 @@ void main(void)
     while(1)
         {
 
+        if(alarm_hours > 12)
+             alarm_hours = alarm_hours - 12;
+
+         if(hours > 23)
+             hours = hours - 24;
+
+         if(alarm_minutes > 59)//check if alarm minutes is greater than 59
+             alarm_minutes = alarm_minutes - 60;//reset to loop again
+
+         if(minutes > 59)//check if minutes value is greater than 59
+            minutes = minutes - 60;//reset to loop again
+
+
         switch (current_clock_state)
         {
         case MAIN:
+            printRTC();
+
+            if(!(P2->IN & BIT5)) //if statement for the light button
+            {
+                delay_milli(300);
+                current_clock_state = SET_TIME;
+            }
+
+            if(!(P2->IN & BIT6)) //if statement for the light button
+            {
+                delay_milli(300);
+                current_clock_state = SET_ALARM;
+            }
             main_state();
             break;
 
         case SET_TIME:
+            printRTC();
+
+            if(hours > 23)
+            {
+              hours = 0;
+            }
+
+            if(!(P2->IN & BIT5)) //if statement for the light button
+            {
+                delay_milli(100);
+                current_clock_state = MAIN;
+            }
             set_time();
-            break;
 
         case SET_ALARM:
+            if(!(P2->IN & BIT6)) //if statement for the light button
+            {
+                delay_milli(100);
+                current_clock_state = MAIN;
+            }
             set_alarm();
             break;
         }
@@ -234,17 +282,17 @@ void main(void)
 
 
 
-        if(RTC_flag)
-        {
-            printRTC();
-            RTC_flag = 0;
-        }
-        if(RTC_alarm)
-        {
-            printf("ALARM\n");
-            RTC_alarm = 0;
-
-        }
+//        if(RTC_flag)
+//        {
+////            printRTC();
+//            RTC_flag = 0;
+//        }
+//        if(RTC_alarm)
+//        {
+//            printf("ALARM\n");
+//            RTC_alarm = 0;
+//
+//        }
         }
 }
 /************************************************************************************************************************************************/
@@ -353,15 +401,12 @@ void alarm_statement()
 /************************************************************************************************************************************************/
 void set_alarm(void) //blue button
 {
-    commandWrite(0xC0);
-    for(x=0; x<16; x++)
-           {
-               dataWrite(gucci[x]);
-           }
-    delay_micro(10);
-
-    if(!(P2->IN & BIT5)) current_clock_state = SET_TIME; //if white button pressed go to that state
-    if(!(P2->IN & BIT7)) current_clock_state = MAIN; //if white button pressed go to that state
+//    commandWrite(0xC6);
+//    for(x=0; x<6; x++)
+//           {
+//               dataWrite(gucci[x]);
+//           }
+//    delay_micro(10);
 }
 /************************************************************************************************************************************************/
 
@@ -369,14 +414,88 @@ void set_alarm(void) //blue button
 
 /* SET TIME */
 /************************************************************************************************************************************************/
-void set_time(void) //white button
+void set_time(void)
 {
-    commandWrite(0xC0);
-    for(x=0; x<16; x++)
-           {
-               dataWrite(juicy[x]);
-           }
-    delay_micro(10);
+//    if(P2->IN & BIT5)//conditional to see if set time button has been pressed
+//    {
+//        ctrA++;//increment set time global variable
+//
+//        if(ctrA > 3)//if button has been pressed more than 3 times
+//        {
+//          ctrA = 0;//reset number of presses to zero
+//        }
+//    }
+
+    char current_time[9];//current time array
+    char set_hour[9];//used to set hour
+    char set_min[9];//used to set minute
+    char AM[2]="AM";
+    char PM[2]="PM";
+
+
+    commandWrite(0x83);//command cursor to go to first line
+    delay_milli(100);//delay 100 milliseconds
+
+    sprintf(current_time, "%02d:%02d:%02d\n",now.hour, now.min, now.sec); //convert current time to string
+    sprintf(set_hour, "  :%02d:%02d\n",now.min,now.sec);//convert current time to flash hour string
+    sprintf(set_min, "%02d:  :%02d\n",now.hour,now.sec);//convert current time to flash min string
+
+    for(x=0;x<8;x++)//for loop to print time
+    {
+        dataWrite(current_time[x]);//print each digit of current time to LCD
+        delay_milli(100);//delay 100 milliseconds between digits
+    }
+
+    if(ctrA == 1)//conditional to check if set time button has been pressed once
+    {
+        commandWrite(0x83);//command cursor to go to first line of LCD
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<8;x++)//print minutes and seconds of time to flash hour
+        {
+            dataWrite(set_hour[x]);//print each digit of current time to LCD
+            delay_milli(100);//delay 100 milliseconds between digits
+        }
+    }
+    else if(ctrA == 2)
+    {
+        commandWrite(0x83);//command cursor to go to first line of LCD
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<8;x++)
+        {
+            dataWrite(set_min[x]);//print each digit of current time to LCD
+            delay_milli(100);//delay 100 milliseconds between digits
+        }
+    }
+
+
+
+    if(hours < 11)
+    {
+        commandWrite(0x8B);//command cursor to go to space beyond time
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<2;x++)//for loop to print AM
+        {
+            dataWrite(AM[x]);//print each letter to LCD
+            delay_milli(100);//delay 100 milliseconds between letters
+        }
+    }
+
+    else if(hours > 11 && hours < 24)
+    {
+        commandWrite(0x8B);//command cursor to go to space beyond time
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<2;x++)//for loop to print AM
+        {
+            dataWrite(PM[x]);//print each letter to LCD
+            delay_milli(100);//delay 100 milliseconds between letters
+        }
+    }
+
+    if(ctrA == 3)
+                {
+                    current_clock_state= MAIN;
+                }//update state to current time
+
 }
 /************************************************************************************************************************************************/
 
@@ -387,16 +506,26 @@ void set_time(void) //white button
 void main_state(void) //black button if necessary
 {
 
-    if(!(P2->IN & BIT5)) //if statement for the light button
+    if(hours < 11)
     {
-        delay_milli(100);
-        current_clock_state = SET_TIME;
+        commandWrite(0x8B);//command cursor to go to space beyond time
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<2;x++)//for loop to print AM
+        {
+            dataWrite(AM[x]);//print each letter to LCD
+            delay_milli(100);//delay 100 milliseconds between letters
+        }
     }
 
-    if(!(P2->IN & BIT6)) //if statement for the light button
+    else if(hours > 11 && hours < 24)
     {
-        delay_milli(100);
-        current_clock_state = SET_ALARM;
+        commandWrite(0x8B);//command cursor to go to space beyond time
+        delay_milli(100);//delay 100 milliseconds
+        for(x=0;x<2;x++)//for loop to print AM
+        {
+            dataWrite(PM[x]);//print each letter to LCD
+            delay_milli(100);//delay 100 milliseconds between letters
+        }
     }
 
 }
@@ -431,13 +560,6 @@ void alarm_off_func(void)
         }
         delay_micro(10);
 
-//
-//        if(!(P2->IN & BIT3))
-//            {
-//            delay_milli(100);
-//            current_alarm_state = ALARM_ON;
-//            }
-
 }
 /************************************************************************************************************************************************/
 
@@ -452,12 +574,6 @@ void alarm_snooze_func(void)
             dataWrite(alarm_snooze[x]);
         }
         delay_micro(10);
-
-//        if(!(P2->IN & BIT3))
-//            {
-//            delay_milli(100);
-//            current_alarm_state = ALARM_OFF;
-//            }
 
 
 }
@@ -582,7 +698,7 @@ void configRTC(void)
     RTC_C->CTL0     =   0xA500;     //Write Code, IE on RTC Ready
     RTC_C->CTL13    =   0x0000;
 
-    RTC_C->TIM0     = 30<<8 | 00;
+    RTC_C->TIM0     = 30<<8 | 55;
     RTC_C->TIM1     = 2<<8 | 12;
     RTC_C->PS1CTL   = 0b11010;
 
@@ -610,6 +726,73 @@ void printRTC(void)
        {
            dataWrite(realtime[i]); //prints realtime[] to LCD screen
        }
+
+//       char current_time[9];//current time array
+//       char set_hour[9];//used to set hour
+//       char set_min[9];//used to set minute
+//       char AM[2]="AM";
+//       char PM[2]="PM";
+//
+//
+//       commandWrite(0x83);//command cursor to go to first line
+//       delay_milli(100);//delay 100 milliseconds
+//
+//
+//       sprintf(set_hour, "  :%02d:%02d\n",now.min,now.sec);//convert current time to flash hour string
+//       sprintf(set_min, "%02d:  :%02d\n",now.hour,now.sec);//convert current time to flash min string
+//
+//
+//       sprintf(current_time, "%02d:%02d:%02d\n",now.hour, now.min, now.sec); //convert current time to string
+//       for(x=0;x<8;x++)//for loop to print time
+//       {
+//           dataWrite(current_time[x]);//print each digit of current time to LCD
+//           delay_milli(100);//delay 100 milliseconds between digits
+//       }
+//
+//       if(ctrA == 1)//conditional to check if set time button has been pressed once
+//       {
+//           commandWrite(0x83);//command cursor to go to first line of LCD
+//           delay_milli(100);//delay 100 milliseconds
+//           for(x=0;x<8;x++)//print minutes and seconds of time to flash hour
+//           {
+//               dataWrite(set_hour[x]);//print each digit of current time to LCD
+//               delay_milli(100);//delay 100 milliseconds between digits
+//           }
+//       }
+//       else if(ctrA == 2)
+//       {
+//           commandWrite(0x83);//command cursor to go to first line of LCD
+//           delay_milli(100);//delay 100 milliseconds
+//           for(x=0;x<8;x++)
+//           {
+//               dataWrite(set_min[x]);//print each digit of current time to LCD
+//               delay_milli(100);//delay 100 milliseconds between digits
+//           }
+//       }
+//
+//
+//
+//       if(hours < 11)
+//       {
+//           commandWrite(0x8B);//command cursor to go to space beyond time
+//           delay_milli(100);//delay 100 milliseconds
+//           for(x=0;x<2;x++)//for loop to print AM
+//           {
+//               dataWrite(AM[x]);//print each letter to LCD
+//               delay_milli(100);//delay 100 milliseconds between letters
+//           }
+//       }
+//
+//       else if(hours > 11 && hours < 24)
+//       {
+//           commandWrite(0x8B);//command cursor to go to space beyond time
+//           delay_milli(100);//delay 100 milliseconds
+//           for(x=0;x<2;x++)//for loop to print AM
+//           {
+//               dataWrite(PM[x]);//print each letter to LCD
+//               delay_milli(100);//delay 100 milliseconds between letters
+//           }
+//       }
 }
 /************************************************************************************************************************************************/
 
