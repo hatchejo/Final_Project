@@ -81,6 +81,7 @@ void LED_init(void);
 
 /* ALARM */
 /************************************************************************************************************************************************/
+void alarm_statement(void);
 void alarm_time_statement(void);
 void main_state(void);
 void set_time(void); //white button
@@ -89,11 +90,14 @@ void alarm_on_func(void);
 void alarm_off_func(void);
 void alarm_snooze_func(void);
 
+char AM[2] ="AM";
+char PM[2] ="PM";
 
-char alarm_on[16] = "Alarm: ON       ";
-char alarm_off[16] = "Alarm: OFF      ";
-char alarm_snooze[16] = "Alarm: SNOOZE   ";
-char alarm_time[11] = "Alarm Time:";
+char alarm[6] = "Alarm:";
+char alarm_on[6] = "ON    ";
+char alarm_off[6] = "OFF   ";
+char alarm_snooze[6] = "SNOOZE";
+char alarm_time[9] = "Alarm at:";
 
 //testers
 char juicy[16] = "JUICY      BOOTY";
@@ -151,6 +155,7 @@ void main(void)
     LED_init();
 
     alarm_time_statement();
+    alarm_statement();
 
 /*INTERRUPTS*/
     __disable_irq();
@@ -189,14 +194,39 @@ void main(void)
         switch (current_alarm_state)
         {
         case ALARM_ON:
+            if(!(P2->IN & BIT3))
+            {
+                delay_milli(300);
+                current_alarm_state = ALARM_OFF;
+            }
+
+            if(!(P2->IN & BIT4))
+            {
+                delay_milli(300);
+                current_alarm_state = ALARM_SNOOZE;
+            }
+
             alarm_on_func();
             break;
 
         case ALARM_OFF:
+            if(!(P2->IN & BIT3))
+                {
+                  delay_milli(300);
+                  current_alarm_state = ALARM_ON;
+                }
+
             alarm_off_func();
             break;
 
         case ALARM_SNOOZE:
+
+            if(!(P2->IN & BIT3))
+               {
+                  delay_milli(300);
+                  current_alarm_state = ALARM_OFF;
+                }
+
             alarm_snooze_func();
             break;
         }
@@ -289,17 +319,31 @@ void RTC_C_IRQHandler(void)
 
 
 
-/* ALARM STATUS */
+/* ALARM TIME STATEMENT */
 /************************************************************************************************************************************************/
-void alarm_time_statement(void)
+void alarm_time_statement()
 {
         commandWrite(0x90);
-        for(x=0; x<11; x++)
+        for(x=0; x<9; x++)
                {
                    dataWrite(alarm_time[x]);
                }
         delay_micro(10);
 
+}
+/************************************************************************************************************************************************/
+
+
+
+/************************************************************************************************************************************************/
+void alarm_statement()
+{
+    commandWrite(0xC0);
+    for(x=0; x<6; x++)
+           {
+               dataWrite(alarm[x]);
+           }
+    delay_micro(10);
 }
 /************************************************************************************************************************************************/
 
@@ -364,26 +408,12 @@ void main_state(void) //black button if necessary
 void alarm_on_func(void)
 {
 
-    commandWrite(0xC0);
-        for(x=0; x<16; x++)
+    commandWrite(0xC6);
+        for(x=0; x<6; x++)
         {
             dataWrite(alarm_on[x]);
         }
         delay_micro(10);
-
-
-        if(!(P2->IN & BIT4))
-            {
-            delay_milli(100);
-            current_alarm_state = ALARM_SNOOZE;
-            }
-
-        if(!(P2->IN & BIT3))
-            {
-            delay_milli(100);
-            current_alarm_state = ALARM_OFF;
-            }
-
 
 }
 /************************************************************************************************************************************************/
@@ -394,19 +424,19 @@ void alarm_on_func(void)
 void alarm_off_func(void)
 {
 
-    commandWrite(0xC0);
-        for(x=0; x<16; x++)
+    commandWrite(0xC6);
+        for(x=0; x<6; x++)
         {
             dataWrite(alarm_off[x]);
         }
         delay_micro(10);
 
-
-        if(!(P2->IN & BIT3))
-            {
-            delay_milli(100);
-            current_alarm_state = ALARM_ON;
-            }
+//
+//        if(!(P2->IN & BIT3))
+//            {
+//            delay_milli(100);
+//            current_alarm_state = ALARM_ON;
+//            }
 
 }
 /************************************************************************************************************************************************/
@@ -416,18 +446,18 @@ void alarm_off_func(void)
 /************************************************************************************************************************************************/
 void alarm_snooze_func(void)
 {
-    commandWrite(0xC0);
-        for(x=0; x<16; x++)
+    commandWrite(0xC6);
+        for(x=0; x<6; x++)
         {
             dataWrite(alarm_snooze[x]);
         }
         delay_micro(10);
 
-        if(!(P2->IN & BIT3))
-            {
-            delay_milli(100);
-            current_alarm_state = ALARM_OFF;
-            }
+//        if(!(P2->IN & BIT3))
+//            {
+//            delay_milli(100);
+//            current_alarm_state = ALARM_OFF;
+//            }
 
 
 }
