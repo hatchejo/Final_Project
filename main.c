@@ -1,3 +1,6 @@
+
+
+
 #include "msp.h"
 #include "stdint.h"
 #include <stdio.h>
@@ -65,12 +68,10 @@ uint8_t RTC_flag = 0, RTC_alarm;
 
 /*BUTTON CONFIGURATIONS */
 /************************************************************************************************************************************************/
-void button_green_config(void);
-void button_red_config(void);
+
 void button_speed_config(void);
-void button_white_config(void);
-void button_blue_config(void);
-void button_black_config(void); //temperature sensor configuration
+void button_config(void);
+//void button_black_config(void); //temperature sensor configuration
 
 
 /* LED INITIALIZATION */
@@ -155,7 +156,7 @@ void main(void)
 
 
 
-    button_black_config();
+   // button_black_config();
 
     LED_init();
 
@@ -167,11 +168,7 @@ void main(void)
     button_speed_config();
     NVIC_EnableIRQ(PORT1_IRQn);
 
-    button_green_config();
-    button_red_config();
-    button_white_config();
-    button_blue_config();
-
+    button_config();
     //button_black_config();
     NVIC_EnableIRQ(PORT2_IRQn);
 
@@ -344,18 +341,93 @@ void main(void)
 void PORT2_IRQHandler(void)
 {
 
-        if(P2->IFG & BIT5)//conditional to see if set time button has been pressed
-        {
-            ctrA++;//increment set time global variable
-
-
-            if(ctrA > 3)//if button has been pressed more than 3 times
+        if(P2 -> IFG & BIT6)//conditional to see if set alarm button has been pressed
             {
-              ctrA = 0;//reset number of presses to zero
+                ctrB++;//increment set alarm global variable
+                if(ctrB>3)//if button has been pressed more than 3 times
+                    ctrB=0;//reset number of presses to zero
+                P2 -> IFG &= ~BIT6;//clear interrupt flag
+            }
+            if(P2 -> IFG & BIT5)//conditional to see if set time button has been pressed
+            {
+                ctrA++;//increment set time global variable
+                if(ctrA>3)//if button has been pressed more than 3 times
+                    ctrA=0;//reset number of presses to zero
+                P2 -> IFG &= ~BIT5;//clear interrupt flag
+            }
+            if(P2 -> IFG & BIT3)//conditional to check if on/off/up button has been pressed
+            {
+                if(ctrA==1)//if the set time button has been pressed once
+                {
+                    hours++;//increment hour count variable
+                    RTC_C->TIM1++;//increment value stored in hours register
+                    if((RTC_C -> TIM1 )>12)
+                    {//if hours register is greater than 12
+                        RTC_C -> TIM1=1;
+                    }//reset to 1
+                    if(hours>24)//if hour count variable is greater than 24
+                        hours=hours-24;//subtract 24 to loop again
+                }
+                else if(ctrA==2)//conditional to check if set time button has been pressed twice
+                {
+                    minutes++;//increment minute count variable
+                    if((RTC_C -> TIM0 & 0xFF00) > 0<<8)
+                        RTC_C-> TIM0 = (((RTC_C->TIM0 & 0xFF00) >> 8)+1)<<8;//increment values stored in minutes register
+                                //((RTC_C->TIM0 & 0xFF00)-1);//increment value stored in minutes register
+                    if((RTC_C -> TIM0 & 0xFF00)==0<<8)
+                        RTC_C -> TIM0 =((RTC_C -> TIM0<<8 & 0xFF00)+59);
+        //            if((RTC_C -> TIM0)>59)//if minutes register is greater than 59
+        //            {
+        //                RTC_C->TIM0=0;//reset to 1
+        //            }
+                    if(minutes>59)//if minutes count variable is greater than 59
+                        minutes=minutes-59;//subtract 58 to loop again
+                }
+                else if(ctrB==1)
+                {
+                    alarm_hours++;//increment alarm hour count variable
+                    hours++;//increment hour count variable
+        //            if(alarmHour>12);//check if alarm hour is greater than 12
+        //                alarmHour=alarmHour-11;//loop back to 1 once it goes over
+        //            if(hours>23)//check if hour value is greater than 24
+        //                hours=hours-23;//subtract 24 to loop again
+                }
+                else if(ctrB==2)
+                {
+                    alarm_minutes++;//increment alarm minute count variable
+                    minutes++;//increment minutes count variable
+        //            if(alarmMin>59)//check if alarm minutes is greater than 59
+        //                alarmMin=alarmMin-60;//reset to loop again
+        //            if(minutes>59)//check if minutes value is greater than 59
+        //                minutes=minutes-60;//reset to loop again
+                }
+                P2 -> IFG &= ~BIT3;//clear flag
+            }
+            if(P2 -> IFG & BIT4)//conditional to check if snooze/down button has been pressed
+            {
+                if(ctrA==1)//conditional to check if set time button has been pressed once
+                {
+                    //hours=23;//set hour count variable to 22
+                    hours--;//decrement hour count variable
+                    RTC_C->TIM1--;//decrement value stored in hours register
+                    if((RTC_C -> TIM1 )<1)//if hours register is less than 1
+                    {
+                        RTC_C -> TIM1=12;//reset to 12
+                    }
+                    if(hours<0)//if hour count variable is less than 0
+                        hours=23;//reset to loop again
+                }
+                else if(ctrA==2)//conditional to check if set time button has been pressed twice
+                {
+                    minutes--;
+                    if((RTC_C -> TIM0 & 0xFF00) > 0<<8)
+                        RTC_C-> TIM0 = ((RTC_C->TIM0 & 0xFF00)-1);//decrement value stored in minutes register
+                }
+
+                P2 -> IFG &= ~BIT4;//clear flag
             }
 
-            P2->IFG &= ~(BIT5); //clears the flag before exiting interrupt
-        }
+
 
 }
 /************************************************************************************************************************************************/
@@ -659,7 +731,7 @@ void alarm_snooze_func(void)
     {
        P1->SEL0 &= ~(BIT1 | BIT4); //sets for GPIO
        P1->SEL1 &= ~(BIT1 | BIT4); //sets for GPIO
-       P1->DIR &= ~(BIT1 | BIT4); //set P1.1 as an Input
+       P1->DIR |= (BIT1 | BIT4); //set P1.1 as an Input
        P1->REN |= (BIT1 | BIT4); //enable pull-up resistor (P1.1 output high)
        P1->OUT |= (BIT1 | BIT4); //make P1.1 default to a '1'
        P1->IES |= (BIT1 | BIT4); //set P1.1's Interrupt to trigger when it goes from high to low
@@ -670,81 +742,32 @@ void alarm_snooze_func(void)
 
 
 
-/* GREEN BUTTON CONFIGURATION */
+/* WHITE, RED, GREEN AND BLUE BUTTON INITIALIZATION */
 /************************************************************************************************************************************************/
-    void button_green_config(void)
-    {
-        P2->SEL0 &= ~(BIT3); //sets for GPIO
-        P2->SEL1 &= ~(BIT3); //sets for GPIO
-        P2->DIR &= ~(BIT3); //set P2.3 as an Input
-        P2->REN |= (BIT3); //enable pull-up resistor (P2.3 output high)
-        P2->OUT |= (BIT3); //make P2.3 default to a '1'
-        P2->IES |= (BIT3); //set P2.3's Interrupt to trigger when it goes from high to low
-        //P2->IE |= (BIT3); //set interrupt on for P2.3 right now it is disabled
-        P2->IFG &= ~(BIT3); //clear flag before exiting the interrupt
-    }
-/************************************************************************************************************************************************/
-
-
-
-/* RED BUTTON CONFIGURATION */
-/************************************************************************************************************************************************/
-    void button_red_config(void)
-     {
-         P2->SEL0 &= ~(BIT4); //sets for GPIO
-         P2->SEL1 &= ~(BIT4); //sets for GPIO
-         P2->DIR &= ~(BIT4); //set P2.4 as an Input
-         P2->REN |= (BIT4); //enable pull-up resistor (P2.4 output high)
-         P2->OUT |= (BIT4); //make P2.4 default to a '1'
-         //P2->IES |= (BIT4); //set P2.4's Interrupt to trigger when it goes from high to low
-         //P2->IE &= ~(BIT4); //set interrupt on for P2.4 rn its disabled
-         //P2->IFG &= ~(BIT4); //clear flag before exiting the interrupt
-      }
-/************************************************************************************************************************************************/
-
-
-
-/* WHITE BUTTON INITIALIZATION */
-/************************************************************************************************************************************************/
-void button_white_config(void)
+void button_config(void) //SET Time buttons
 {
-    P2->SEL0 &= ~(BIT5); //sets for GPIO
-    P2->SEL1 &= ~(BIT5); //sets for GPIO
-    P2->DIR &= ~(BIT5); //set P2.5 as an Input
-    P2->REN |= (BIT5); //enable pull-up resistor
-    P2->OUT |= (BIT5); //make P2.5 equal to 1
-    P2->IES |= (BIT5); //set P2.5's Interrupt to trigger when it goes from high to low //right now dsabled
-    P2->IE |= (BIT5); //set interrupt on for P2.5 rn its disabled
-    P2->IFG &= ~(BIT5); //clear flag before exiting the interrupt
+    P2->SEL0 &= ~(BIT3|BIT4|BIT5|BIT6); //sets for GPIO
+    P2->SEL1 &= ~(BIT3|BIT4|BIT5|BIT6); //sets for GPIO
+    P2->DIR &= ~(BIT3|BIT4|BIT5|BIT6); //set P2.5 as an Input
+    P2->REN |= (BIT3|BIT4|BIT5|BIT6); //enable pull-up resistor
+    P2->OUT |= (BIT3|BIT4|BIT5|BIT6); //make P2.5 equal to 1
+    P2->IES |= (BIT3|BIT4|BIT5|BIT6); //set P2.5's Interrupt to trigger when it goes from high to low //right now dsabled
+    P2->IE |= (BIT3|BIT4|BIT5|BIT6); //set interrupt on for P2.5 rn its disabled
+    P2->IFG &= ~(BIT3|BIT4|BIT5|BIT6); //clear flag before exiting the interrupt
 }
 /************************************************************************************************************************************************/
-
-
-
-/* BLUE BUTTON INITIALIZATION */
-/************************************************************************************************************************************************/
-void button_blue_config(void)
-{
-    P2->SEL0 &= ~(BIT6); //sets for GPIO
-    P2->SEL1 &= ~(BIT6); //sets for GPIO
-    P2->DIR &= ~(BIT6); //set P2.6 as an Input
-    P2->REN |= (BIT6); //enable pull-up resistor
-    P2->OUT |= (BIT6); //make P2.6 equal to 1
-}
-/************************************************************************************************************************************************/
-
 
 
 /* BLACK BUTTON INITIALIZATION */
 /************************************************************************************************************************************************/
-void button_black_config(void)
-{
-   P2->SEL0 &= ~(BIT7); //sets for GPIO
-   P2->SEL1 &= ~(BIT7); //sets for GPIO
-   P2->DIR &= ~(BIT7); //set P2.7 as an Input
-   P2->REN |= (BIT7); //enable pull-up resistor
-   P2->OUT |= (BIT7); //make P2.7 equal to 1
-}
+//void button_black_config(void)
+//{
+//   P2->SEL0 &= ~(BIT7); //sets for GPIO
+//   P2->SEL1 &= ~(BIT7); //sets for GPIO
+//   P2->DIR &= ~(BIT7); //set P2.7 as an Input
+//   P2->REN |= (BIT7); //enable pull-up resistor
+//   P2->OUT |= (BIT7); //make P2.7 equal to 1
+//}
 /************************************************************************************************************************************************/
 
 
@@ -827,8 +850,6 @@ void printRTC(void)
                delay_milli(100);//delay 100 milliseconds between digits
            }
        }
-
-
 
        if(hours < 11)
        {
