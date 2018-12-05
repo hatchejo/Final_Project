@@ -15,9 +15,10 @@
  * Description:
  */
 
+
 /* TIMERS */
 /************************************************************************************************************************************************/
-void SysTick_Init(void); // function that initializes the SysTick Timer
+void SysTick_Init(void);    //function that initializes the SysTick Timer
 void delay_micro(uint32_t microsec);    //SysTick timer generates delay in microseconds
 void delay_milli(uint32_t milli);     //SysTick timer generates delay in milliseconds
 
@@ -45,9 +46,9 @@ void ftoa(float n, char *res, int afterpoint); //changes a float to an array
 
 
 float nADC, result, tempC, tempF; //nADC is the raw value from potentiometer, result is the converted voltage read
-char temparray[17];
-char temparray2[17];
-char currenttemp[6] ="Temp: ";
+char temparray[17]; //array for celsius
+char temparray2[17]; //array for fahrenheit
+char currenttemp[6] ="Temp: "; //array to spell out this statement on the LCD
 
 
 /* REAL TIME CLOCK*/
@@ -69,65 +70,72 @@ uint8_t RTC_flag = 0, RTC_alarm;
 /*BUTTON CONFIGURATIONS */
 /************************************************************************************************************************************************/
 
-void button_speed_config(void);
-void button_config(void);
-//void button_black_config(void); //temperature sensor configuration
+void button_speed_config(void); //on-board buttons
+void button_config(void); //switch buttons
+
 
 
 /* LED INITIALIZATION */
 /************************************************************************************************************************************************/
-void LED_init(void);
+void LED_init(void); //initializes the LED lights for PWM
 
 
 /* ALARM */
 /************************************************************************************************************************************************/
-void alarm_statement(void);
-void printalarm(void);
-void main_state(void);
-void set_time(void); //white button
-void set_alarm(void); // blue button
-void alarm_on_func(void);
-void alarm_off_func(void);
-void alarm_snooze_func(void);
+void alarm_statement(void); //"Alarm:"
+void printalarm(void); //prints the alarm time
+void main_state(void); //functions for main state
+void set_time(void); //blue button, set time function
+void set_alarm(void); // black button, set alarm function
+void alarm_on_func(void); //alarm on function
+void alarm_off_func(void); //alarm off function
+void alarm_snooze_func(void);//alarm snooze function
 
-char AM[2] ="AM";
-char PM[2] ="PM";
+char AM[2] ="AM"; //array for AM
+char PM[2] ="PM"; //array for PM
 
-char alarm[6] = "Alarm:";
+char alarm[6] = "Alarm:"; //you get the jist
 char alarm_on[6] = "ON    ";
 char alarm_off[6] = "OFF   ";
 char alarm_snooze[6] = "SNOOZE";
 char alarm_time[9] = "Alarm at:";
-int alarm_update = 0;
+
+int alarm_update = 0; //alarm flag
 
 
-
+/* structures for the clock state*/
 enum clock_states{
-SET_TIME,
-SET_A,
-MAIN
+SET_TIME, //state for setting the time
+SET_ALARM, //state for setting the alarm
+MAIN //main state of the clock
  };
 
-enum clock_states current_clock_state = MAIN;
+enum clock_states current_clock_state = MAIN; //sets the default state of the clock to be MAIN
 
+/* structure for the alarm state */
 enum alarm_states{
-ALARM_ON,
-ALARM_OFF,
-ALARM_SNOOZE
+ALARM_ON, //state for turning the alarm on
+ALARM_OFF, //state for turning the alarm off
+ALARM_SNOOZE //state for snoozing the alarm
  };
- enum alarm_states current_alarm_state = ALARM_OFF;
+
+ enum alarm_states current_alarm_state = ALARM_OFF; //sets the default state of the alarm to be off
+
+
 
 /* GLOABL VARIABLES */
 /************************************************************************************************************************************************/
-uint8_t x, value = 0;
-volatile int ctrA = 0;
-volatile int ctrB = 0;
-volatile int ctrC = 0;
-volatile int ctrD = 0;
+//these are all placeholders/counters for interrupts
+ uint8_t x, value = 0;
+volatile int ctrA = 0; //counter for set time
+volatile int ctrB = 0; //counter for set alarm
+volatile int ctrC = 0; //counter for on/off/up button (green)
+volatile int ctrD = 0; //counter for snooze/down button (red)
 
+//used to increment and decrement when setting the time and alarm
 volatile int hours = 0;
 volatile int minutes = 0;
-volatile int alarm_hours = 01;
+volatile int alarm_hours = 06;
 volatile int alarm_minutes = 00;
 
 
@@ -146,10 +154,6 @@ void main(void)
 {
     WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;  // stop watchdog timer
 
-    P2->SEL0 &= ~BIT2;
-    P2->SEL1 &= ~BIT2;
-    P2->DIR |= BIT2;
-    P2->OUT &= ~BIT2;
 
     SysTick_Init(); //systick timer
 
@@ -160,153 +164,115 @@ void main(void)
     tempconversion(); //temperature conversion
     printtemp(); //prints the temperature
 
-
-
-   // button_black_config();
-
-    LED_init();
-    printalarm();
-    alarm_statement();
+    LED_init(); //yellow LED initialization
+    printalarm(); //prints the alarm RTC
+    alarm_statement(); //prints the statement "Alarm:"
 
 /*INTERRUPTS*/
     __disable_irq();
-    button_speed_config();
-    NVIC_EnableIRQ(PORT1_IRQn);
+    button_speed_config(); //configures the MSP on-board buttons to control the speed
+    NVIC_EnableIRQ(PORT1_IRQn); //PORT 1 interrupt handler
 
-    button_config();
-    //button_black_config();
-    NVIC_EnableIRQ(PORT2_IRQn);
+    button_config(); //configures all the buttons as interrupts
+    NVIC_EnableIRQ(PORT2_IRQn); // PORT 2 interrupt handler for all buttons
 
-    configRTC();
-    NVIC_EnableIRQ(RTC_C_IRQn);
+    configRTC(); //RTC clock configuration
+    NVIC_EnableIRQ(RTC_C_IRQn); //RTC interrupt handler for when the alarm goes off
     __enable_irq();
+
 
 
     while(1)
         {
 
-        if(alarm_hours > 12)
-             alarm_hours = alarm_hours - 12;
-
-         if(hours > 23)
-             hours = hours - 24;
-
-         if(alarm_minutes > 59)//check if alarm minutes is greater than 59
-             alarm_minutes = alarm_minutes - 60;//reset to loop again
-
-         if(minutes > 59)//check if minutes value is greater than 59
-            minutes = minutes - 60;//reset to loop again
-
-         if(alarm_update)
-         {
-             P2->OUT |=BIT2;
-         }
-
-
-        switch (current_clock_state)
+ /************************************* SWITCHES CURRENT CLOCK STATE ************************************ */
+        switch (current_clock_state) //sets up switch case for current_clock_state
         {
         case MAIN:
-            printRTC();
-            //delay_milli(1000);
+            printRTC(); //runs this function
 
-            if(ctrA == 1) //if statement for the light button
+            if(ctrA == 1) //if set time button (blue) is pushed
             {
-                current_clock_state = SET_TIME;
+                current_clock_state = SET_TIME; //go to this state
             }
 
-            if(ctrB == 1) //if statement for the light button
+            if(ctrB == 1) //if set alarm button (black) is pushed
             {
-                current_clock_state = SET_A; //the original SET_ALARM was acting weird so I changed it to SET_A
+                current_clock_state = SET_ALARM; //go to this state
             }
-
-
-//            if(!(P2->IN & BIT3))
-//            {
-//                delay_milli(300);
-//                current_alarm_state = ALARM_ON;
-//            }
-
-//            if((ctrC == 1))
-//                {
-//                current_alarm_state = ALARM_ON;
-//                }
             break;
 
         case SET_TIME:
-            printRTC();
+           printRTC(); //runs this function
 
-            if(hours > 23)
+            if(hours > 23) //if the increment goes above 23 hours
             {
-              hours = 0;
+              hours = 0; //set hours back to 0
             }
 
-            if(ctrA == 3)
+            if(ctrA == 3) //if set time button (blue) is pressed for the third time
             {
-                current_clock_state = MAIN;
+                current_clock_state = MAIN; //switch back to MAIN
             }
-            //break;
+            break;
 
 
-        case SET_A:
-            printalarm();
+        case SET_ALARM:
+            printalarm(); //runs this function
 
-            if(alarm_hours > 23)
+            if(alarm_hours > 23) //if the increment goes above 23 hours
             {
-                alarm_hours =0;
+                alarm_hours = 0; //set alarm hour back to
             }
 
 
-            if(ctrB == 3)
+            if(ctrB == 3) //if set alarm button (black) is pressed for the third time
             {
-                current_clock_state = MAIN;
+                current_clock_state = MAIN; //switch to MAIN
             }
+            break;
         }
 
 
-
-        switch (current_alarm_state)
+/************************************* SWITCHES CURRENT ALARM STATE ************************************ */
+        switch (current_alarm_state)//sets up switch case for current_alarm_state
         {
         case ALARM_ON:
-            if(!(P2->IN & BIT3))
+
+            if(ctrC == 2)
             {
-                delay_milli(300);
-                current_alarm_state = ALARM_OFF;
+                current_alarm_state = ALARM_OFF; //switch alarm state to off
+                ctrC = 0;
             }
 
-            if(!(P2->IN & BIT4))
-            {
-                delay_milli(300);
-                current_alarm_state = ALARM_SNOOZE;
-            }
+            if(ctrD == 1) //if the button was pushed once
+             {
+                current_alarm_state = ALARM_SNOOZE; //switch the alarm state to on
+                ctrD = 0;
+             }
 
-            alarm_on_func();
+            alarm_on_func(); //runs this function
             break;
 
 
         case ALARM_OFF:
-            if(!(P2->IN & BIT3))
-                {
-                  delay_milli(300);
-                  current_alarm_state = ALARM_ON;
-                }
 
-            alarm_off_func();
+            if(ctrC == 1) //if the button was pushed once
+            {
+            current_alarm_state = ALARM_ON; //switch the alarm state to on
+            }
+
+            alarm_off_func(); //runs this function
             break;
 
 
         case ALARM_SNOOZE:
 
-            if(!(P2->IN & BIT3))
-               {
-                  delay_milli(300);
-                  current_alarm_state = ALARM_OFF;
-                }
-
-            alarm_snooze_func();
+            alarm_snooze_func(); //runs this function
             break;
         }
 
-        }
+     }
 }
 /************************************************************************************************************************************************/
 
@@ -350,147 +316,214 @@ void main(void)
 /************************************************************************************************************************************************/
 void PORT2_IRQHandler(void)
 {
-
-        if(P2 -> IFG & BIT6)//conditional to see if set alarm button has been pressed
+        /*******************************/
+        if(P2 -> IFG & BIT6)//conditional to see if set alarm button (black) has been pressed
             {
+            delay_milli(10);
+            if(P2 -> IFG & BIT6)//conditional to see if set alarm button (black) has been pressed
+                       {
 
-            ctrB++;//increment set alarm global variable
-                if(ctrB >= 3)//if button has been pressed more than 3 times
-                    ctrB=0;//reset number of presses to zero
-                P2 -> IFG &= ~BIT6;//clear interrupt flag
+            delay_micro(100);
+
+            ctrB++;//increments this global counter variable
+
+                if(ctrB > 3)//if button has been pressed more than 3 times
+                {
+                    ctrB = 0;//reset number of presses to zero
+                }
+                P2 -> IFG &= ~BIT6;//clears interrupt flag
+                       }
             }
+        /*******************************/
 
-            if(P2 -> IFG & BIT5)//conditional to see if set time button has been pressed
+            if(P2 -> IFG & BIT5)//conditional to see if set time button (blue) has been pressed
             {
+                delay_milli(10);
 
-                ctrA++;//increment set time global variable
-                if(ctrA >= 3)//if button has been pressed more than 3 times
-                    ctrA=0;//reset number of presses to zero
-                P2 -> IFG &= ~BIT5;//clear interrupt flag
+                if(P2 -> IFG & BIT5)//conditional to see if set time button (blue) has been pressed
+                {
+                //delay_micro(100);
+
+                ctrA++;//increments this global counter variable
+
+                if(ctrA > 3)//if button has been pressed more than 3 times
+                {
+                    ctrA = 0;//reset number of presses to zero
+                }
+
+                P2 -> IFG &= ~BIT5;//clears interrupt flag
+                }
             }
+         /*******************************/
 
 
-            if(P2 -> IFG & BIT3)//conditional to check if on/off/up button has been pressed
+
+
+
+
+
+
+
+
+            if(P2 -> IFG & BIT3)//conditional to check if on/off/up button (green) has been pressed
             {
-
-                ctrC++;
-                if(current_clock_state == MAIN)
+               delay_milli(10);
+               if(P2 -> IFG & BIT3)//conditional to check if on/off/up button (green) has been pressed
+               {
+                if(current_clock_state == MAIN) //checks current clock state
                 {
+                    ctrC++;//increments this global counter variable
 
-                    if(ctrC ==1)
+                    if(ctrC > 3)//if button has been pressed more than 3 times
+
+                        ctrC = 0;//reset number of presses to zero
+
+                    P2 -> IFG &= ~BIT3;//clears interrupt flag
+                }
+               }
+
+
+
+                if(ctrA == 1)//if the set time button (blue) has been pressed once
+                {
+                    hours++;//increment the hours
+
+                    RTC_C -> TIM1++;//increments the value stored in hours register
+
+                    if((RTC_C -> TIM1 ) > 12)//if hours register is greater than 12
                     {
-                    current_alarm_state = ALARM_ON;
+                        RTC_C -> TIM1 = 1;//reset to 1
                     }
 
-                    if(ctrC ==2)
-                    {
-                        current_alarm_state =ALARM_OFF;
-                    }
+                    if(hours > 24)//if hours is greater than 24
 
-                    if(ctrC >= 2)
-                    {
-                        ctrC = 0;
-                    }
+                        hours = hours - 24;//subtract 24 to start again
+                    P2 -> IFG &= ~BIT3;//clears interrupt flag
                 }
 
-                if(ctrA==1)//if the set time button has been pressed once
+
+
+                if(ctrA == 2)//checks to see if set time button (blue) has been pressed again
                 {
-                    hours++;//increment hour count variable
-                    RTC_C->TIM1++;//increment value stored in hours register
-                    if((RTC_C -> TIM1 )>12)
-                    {//if hours register is greater than 12
-                        RTC_C -> TIM1=1;
-                    }//reset to 1
-                    if(hours>24)//if hour count variable is greater than 24
-                        hours=hours-24;//subtract 24 to loop again
-                }
-                else if(ctrA==2)//conditional to check if set time button has been pressed twice
-                {
-                    minutes++;//increment minute count variable
-                    if((RTC_C -> TIM0 & 0xFF00) > 0<<8)
-                        RTC_C-> TIM0 = (((RTC_C->TIM0 & 0xFF00) >> 8)+1)<<8;//increment values stored in minutes register
-                                //((RTC_C->TIM0 & 0xFF00)-1);//increment value stored in minutes register
+                    minutes++;//increment the minutes
+
+                    if((RTC_C -> TIM0 & 0xFF00) > 0 << 8)
+                    {
+                        RTC_C-> TIM0 = (((RTC_C->TIM0 & 0xFF00) >> 8) +1) << 8;//increment values stored in minutes register
+                    }
                     if((RTC_C -> TIM0 & 0xFF00)==0<<8)
+                    {
                         RTC_C -> TIM0 =((RTC_C -> TIM0<<8 & 0xFF00)+59);
-        //            if((RTC_C -> TIM0)>59)//if minutes register is greater than 59
-        //            {
-        //                RTC_C->TIM0=0;//reset to 1
-        //            }
-                    if(minutes>59)//if minutes count variable is greater than 59
-                        minutes=minutes-59;//subtract 58 to loop again
-                }
-                else if(ctrB==1)
-                {
-                    alarm_hours++;//increment alarm hour count variable
-                    //hours++;//increment hour count variable
-        //            if(alarmHour>12);//check if alarm hour is greater than 12
-        //                alarmHour=alarmHour-11;//loop back to 1 once it goes over
-        //            if(hours>23)//check if hour value is greater than 24
-        //                hours=hours-23;//subtract 24 to loop again
-                    RTC_C->TIM1++;//increment value stored in hours register
-                    if((RTC_C -> TIM1 )>12)
-                    {//if hours register is greater than 12
-                        RTC_C -> TIM1=1;
-                    }//reset to 1
-                    if(alarm_hours>24)//if hour count variable is greater than 24
-                        alarm_hours=alarm_hours-24;//subtract 24 to loop again
+                    }
+
+                    if(minutes > 59)//if minutes is greater than 59
+
+                        minutes = minutes - 59;//subtract 59 to start again
+                    P2 -> IFG &= ~BIT3;//clears interrupt flag
                 }
 
-                else if(ctrB==2)
+
+               if(ctrB == 1) //checks to see if the set alarm button (black) was pressed
                 {
-                    alarm_minutes++;//increment alarm minute count variable
-                   // minutes++;//increment minutes count variable
-        //            if(alarmMin>59)//check if alarm minutes is greater than 59
-        //                alarmMin=alarmMin-60;//reset to loop again
-        //            if(minutes>59)//check if minutes value is greater than 59
-        //                minutes=minutes-60;//reset to loop again
+                    alarm_hours++;//increment alarm hours
+
+                    RTC_C -> TIM1++;    //increments alarm hours in register
+
+                    if((RTC_C -> TIM1 ) > 12)   //if alarm hours register is greater than 12
+                    {
+                        RTC_C -> TIM1 = 1;  //reset to 1
+                    }
+
+                    if(alarm_hours > 24)//if alarm hours is greater than 24
+                    {
+                        alarm_hours = alarm_hours - 24;//subtract 24 to start over
+                    }
+                    P2 -> IFG &= ~BIT3;//clears interrupt flag
+                }
+
+
+
+                if(ctrB == 2) //checks to see if the set alarm button(black) was pressed again
+                {
+                    alarm_minutes++; //increments the alarm minutes
 
                     if((RTC_C -> TIM0 & 0xFF00) > 0<<8)
+                    {
                         RTC_C-> TIM0 = (((RTC_C->TIM0 & 0xFF00) >> 8)+1)<<8;//increment values stored in minutes register
-                                //((RTC_C->TIM0 & 0xFF00)-1);//increment value stored in minutes register
+                    }
+
                     if((RTC_C -> TIM0 & 0xFF00)==0<<8)
+                    {
                         RTC_C -> TIM0 =((RTC_C -> TIM0<<8 & 0xFF00)+59);
-        //            if((RTC_C -> TIM0)>59)//if minutes register is greater than 59
-        //            {
-        //                RTC_C->TIM0=0;//reset to 1
-        //            }
+                    }
+
                     if(alarm_minutes>59)//if minutes count variable is greater than 59
+                    {
                         alarm_minutes=alarm_minutes-59;//subtract 58 to loop again
+                    }
+                    P2 -> IFG &= ~BIT3;//clears interrupt flag
                 }
-                }
+
+               }
 
 
 
+            /*******************************/
 
-
-                P2 -> IFG &= ~BIT3;//clear flag
-
-
-            if(P2 -> IFG & BIT4)//conditional to check if snooze/down button has been pressed
+            if(P2 -> IFG & BIT4)    //checks to see if snooze/down button has been pressed
             {
 
-                if(ctrA==1)//conditional to check if set time button has been pressed once
+                delay_milli(10); //delay 100 microseconds
+
+                if(P2 -> IFG & BIT4)    //checks to see if snooze/down button has been pressed
+
                 {
-                    //hours=23;//set hour count variable to 22
-                    hours--;//decrement hour count variable
-                    RTC_C->TIM1--;//decrement value stored in hours register
-                    if((RTC_C -> TIM1 )<1)//if hours register is less than 1
+
+//
+//                    if(current_alarm_state == ALARM_ON) //checks current clock state
+//                    {
+//                        ctrD++;//increments this global counter variable
+//
+//                        if(ctrC > 2)//if button has been pressed more than 3 times
+//                        {
+//                            ctrC = 0;//reset number of presses to zero
+//                        }
+//
+//                        P2 -> IFG &= ~BIT4;//clears interrupt flag
+//                    }
+
+
+                if(ctrA == 1)//conditional to check if set time button (blue) has been pressed
+                {
+                    hours--; //decrement hours
+
+                    RTC_C -> TIM1--;//decrement hours in the register
+
+                    if((RTC_C -> TIM1 ) < 1)//if hours in the register is less than 1
                     {
-                        RTC_C -> TIM1=12;//reset to 12
+                        RTC_C -> TIM1 = 12;//resets to 12
                     }
-                    if(hours<0)//if hour count variable is less than 0
-                        hours=23;//reset to loop again
+
+                    if(hours < 0)//if hour count variable is less than 0
+
+                        hours = 23;//reset
+
+                    P2 -> IFG &= ~BIT4;//clears interrupt flag
                 }
-                else if(ctrA==2)//conditional to check if set time button has been pressed twice
+
+
+                if(ctrA == 2)//checks to see if set time button (blue) has been pressed again
                 {
-                    minutes--;
-                    if((RTC_C -> TIM0 & 0xFF00) > 0<<8)
-                        RTC_C-> TIM0 = ((RTC_C->TIM0 & 0xFF00)-1);//decrement value stored in minutes register
+                    minutes--; //decrements the minutes
+
+                    if((RTC_C -> TIM0 & 0xFF00) > 0 << 8)
+                    {
+                        RTC_C-> TIM0 = ((RTC_C -> TIM0 & 0xFF00) - 1);//decrements the minutes in the register
+                    }
+                    P2 -> IFG &= ~BIT4;//clear flag
                 }
-
-                P2 -> IFG &= ~BIT4;//clear flag
+                }
             }
-
 
 
 }
@@ -501,11 +534,11 @@ void PORT2_IRQHandler(void)
 /************************************************************************************************************************************************/
 void RTC_C_IRQHandler(void)
 {
-//    if(RTC_C->CTL0 & BIT1) //alarm happened
-//    {
-//        RTC_alarm = 1;
-//        RTC_C->CTL0 = 0xA500;
-//    }
+    if(RTC_C->CTL0 & BIT1) //alarm happened
+    {
+        RTC_alarm = 1;
+        RTC_C->CTL0 = 0xA500;
+    }
 
     if(RTC_C->PS1CTL & BIT0) //checks to see if interrupt is enabled
     {
@@ -535,62 +568,78 @@ void RTC_C_IRQHandler(void)
 /************************************************************************************************************************************************/
 void printalarm()
 {
-    char alarm_time[6];//declare empty string to hold alarm time
-    char flash_hour[6];//declare empty string to flash hour time
-    char flash_min[6];//declare empty string to flash min time
+    //arrays to store the RTC values
+    char alarm_time[6];
+    char change_hour[6];
+    char change_min[6];
 
-    char AM_alarm[]="AM";//declare and initialize string to display AM
-    char PM_alarm[]="PM";//declare and initialize string to display PM
+    char AM_alarm[]="AM";
+    char PM_alarm[]="PM";
 
-    sprintf(alarm_time,"%02d:%02d\n",alarm_hours,alarm_minutes);//convert alarm hour and minute global variables to string
-    sprintf(flash_hour,"  :%02d\n",alarm_minutes);//convert alarm minute to string to be flashed when hours update
-    sprintf(flash_min, "%02d:  \n",alarm_hours);//convert alarm hour to string to be flashed when minutes update
+    sprintf(alarm_time,"%02d:%02d\n",alarm_hours,alarm_minutes);  //converts to string
 
-    commandWrite(0x90);//command cursor to go to start of third line
-    delay_milli(100);//delay 100 milliseconds
-    for(x=0;x<5;x++)//for loop to print alarm time
+    sprintf(change_hour,"  :%02d\n",alarm_minutes); //converts to string
+
+    sprintf(change_min, "%02d:  \n",alarm_hours);   //converts to string
+
+    commandWrite(0x90); //third line of LCD
+    delay_milli(10);//delay 10 ms
+
+    for(x = 0; x < 5; x++)//prints alarm time
     {
-        dataWrite(alarm_time[x]);//print each number of time
-        delay_milli(100);//delay 100 milliseconds between each letter
+        dataWrite(alarm_time[x]);//prints alarm time
+
+        delay_micro(100);//delay 100 milliseconds between each letter
     }
-    if(ctrB==1)//if set alarm button has been pressed once
+
+    if(ctrB == 1)//if black button has been pressed
     {
-        commandWrite(0x90);//command cursor to go to start of third line
-        delay_milli(10);//delay 10 milliseconds
-        for(x=0;x<5;x++)
+        commandWrite(0x90); //third line of LCd
+        delay_milli(10);//delay 10 ms
+
+        for(x = 0; x < 5; x++)
         {
-            dataWrite(flash_hour[x]);//print each member of array to screen
-            delay_milli(75);//delay 10 milliseconds between each letter
+           dataWrite(change_hour[x]);//prints this to LCD
+
+           delay_milli(50);//delay 10 milliseconds between each letter
         }
     }
-    else if(ctrB==2)//if set alarm button has been twice
+
+    else if(ctrB == 2)//if black has been pressed again
     {
-        commandWrite(0x90);//command cursor to go to start of third line
-        delay_milli(10);//delay 10 milliseconds
-        for(x=0;x<5;x++)
+        commandWrite(0x90); //third line
+        delay_milli(10);//delay 10 ms
+
+        for(x = 0; x < 5; x++)
         {
-            dataWrite(flash_min[x]);//print each member of array to screen
-            delay_milli(75);//delay 10 milliseconds between each letter
+            dataWrite(change_min[x]);   //print this to LCD
+            delay_milli(50);//delay 10 milliseconds between each letter
         }
     }
-    if(alarm_hours<11)
+
+    if(alarm_hours < 11)
         {
-            commandWrite(0x95);//command cursor to go to space beyond time
-            delay_milli(100);//delay 100 milliseconds
-            for(x=0;x<2;x++)//for loop to print AM
+            commandWrite(0x95); //moves cursor to the fifth spot in line three
+            delay_milli(10);    //delay 10 ms
+
+            for(x = 0; x < 2; x++)//for loop to print AM
             {
                 dataWrite(AM_alarm[x]);//print each letter to LCD
-                delay_milli(75);//delay 100 milliseconds between letters
+
+                delay_micro(100);//delay 100 milliseconds between letters
             }
         }
-        else if(alarm_hours > 11 && alarm_hours<24)
+
+        else if(alarm_hours > 11 && alarm_hours < 24)
         {
-            commandWrite(0x95);//command cursor to go to space beyond time
-            delay_milli(100);//delay 100 milliseconds
-            for(x=0;x<2;x++)//for loop to print AM
+            commandWrite(0x95); //moves cursor to the fifth spot in line three
+            delay_milli(10);//delay 10 ms
+
+            for(x = 0; x < 2; x++)//for loop to print AM
             {
                 dataWrite(PM_alarm[x]);//print each letter to LCD
-                delay_milli(75);//delay 100 milliseconds between letters
+
+                delay_micro(100);//delay 100 milliseconds between letters
             }
         }
 
@@ -759,19 +808,6 @@ void button_config(void) //SET Time buttons
 /************************************************************************************************************************************************/
 
 
-/* BLACK BUTTON INITIALIZATION */
-/************************************************************************************************************************************************/
-//void button_black_config(void)
-//{
-//   P2->SEL0 &= ~(BIT7); //sets for GPIO
-//   P2->SEL1 &= ~(BIT7); //sets for GPIO
-//   P2->DIR &= ~(BIT7); //set P2.7 as an Input
-//   P2->REN |= (BIT7); //enable pull-up resistor
-//   P2->OUT |= (BIT7); //make P2.7 equal to 1
-//}
-/************************************************************************************************************************************************/
-
-
 
 /* RTC CONFIGURATION */
 /************************************************************************************************************************************************/
@@ -784,7 +820,7 @@ void configRTC(void)
     RTC_C->TIM1     = 2<<8 | 12;
     RTC_C->PS1CTL   = 0b11010;
 
-    RTC_C->AMINHR   = ()<<8 | () | BIT(15) | BIT(7);
+   // RTC_C->AMINHR   = ()<<8 | () | BIT(15) | BIT(7);
     RTC_C->CTL0     = ((0xA500) | BIT5);
 
     NVIC_EnableIRQ(RTC_C_IRQn);
@@ -794,123 +830,98 @@ void configRTC(void)
 
 
 
-/************************************************************************************************************************************************/
-//void RTC_C_IRQHandler()
-//{
-////    if(RTC_C->PS1CTL & BIT0){                           // PS1 Interrupt Happened
-////        hours = RTC_C->TIM1 & 0x00FF;                   // Record hours (from bottom 8 bits of TIM1)
-////        minutes = (RTC_C->TIM0 & 0xFF00) >> 8;             // Record minutes (from top 8 bits of TIM0)
-////        //seconds = RTC_C->TIM0 & 0x00FF;                    // Record seconds (from bottom 8 bits of TIM0)
-////        // For increasing the number of seconds  every PS1 interrupt (to allow time travel)
-////        if(secs != 59){                                 // If not  59 seconds, add 1 (otherwise 59+1 = 60 which doesn't work)
-////            RTC_C->TIM0 = RTC_C->TIM0 + 1;
-////        }
-////        else {
-////            RTC_C->TIM0 = (((RTC_C->TIM0 & 0xFF00) >> 8)+1)<<8;  // Add a minute if at 59 seconds.  This also resets seconds.
-////                                                                 // TODO: What happens if minutes are at 59 minutes as well?
-////            time_update = 1;                                     // Send flag to main program to notify a time update occurred.
-////        }
-////        RTC_C->PS1CTL &= ~BIT0;                         // Reset interrupt flag
-////   }
-//    if(RTC_C->CTL0 & BIT1)                              // Alarm happened!
-//    {
-//        alarm_update = 1;                               // Send flag to main program to notify a time update occurred.
-//        RTC_C->CTL0 = (0xA500) | BIT5;                  // Resetting the alarm flag.  Need to also write the secret code
-//                                                        // and rewrite the entire register.
-//                                                        // TODO: It seems like there is a better way to preserve what was already
-//                                                        // there in case the setup of this register needs to change and this line
-//                                                        // is forgotten to be updated.
-//    }
-//}
-/************************************************************************************************************************************************/
-
-
-
-
-
 /* PRINTS RTC TO LCD */
 /************************************************************************************************************************************************/
 void printRTC(void)
 {
-//    char realtime[16]; //array for real time
-//    //char XM[5] = "PM  ";
-//    int i; //placeholder
-//
-//    commandWrite(0x80); //setting cursor to the second row
-//    delay_milli(10); //10 millisecond delay
-//    sprintf(realtime, "   %02d:%02d:%02d \n",now.hour, now.min, now.sec); //takes the realtime and stores it in array realtime[]
-//
-//       for(i = 0; i < 11; i++)
-//       {
-//           dataWrite(realtime[i]); //prints realtime[] to LCD screen
-//       }
 
        char current_time[9];//current time array
        char set_hour[9];//used to set hour
        char set_min[9];//used to set minute
-       char AM[2]="AM";
-       char PM[2]="PM";
-
-
-       commandWrite(0x83);//command cursor to go to first line
-       delay_milli(100);//delay 100 milliseconds
-
-
-       sprintf(set_hour, "  :%02d:%02d\n",now.min,now.sec);//convert current time to flash hour string
-       sprintf(set_min, "%02d:  :%02d\n",now.hour,now.sec);//convert current time to flash min string
 
 
        sprintf(current_time, "%02d:%02d:%02d\n",now.hour, now.min, now.sec); //convert current time to string
-       for(x=0;x<8;x++)//for loop to print time
+
+       sprintf(set_hour, "  :%02d:%02d\n",now.min,now.sec);//convert current time to flash hour string
+
+       sprintf(set_min, "%02d:  :%02d\n",now.hour,now.sec);//convert current time to flash min string
+
+       commandWrite(0x83);//command cursor to go to first line
+       delay_milli(10);//delay 100 milliseconds
+
+       for(x = 0; x < 8; x++)//for loop to print time
        {
            dataWrite(current_time[x]);//print each digit of current time to LCD
-           delay_milli(100);//delay 100 milliseconds between digits
+           delay_milli(50);//delay 100 milliseconds between digits
        }
+
 
        if(ctrA == 1)//conditional to check if set time button has been pressed once
        {
            commandWrite(0x83);//command cursor to go to first line of LCD
-           delay_milli(100);//delay 100 milliseconds
-           for(x=0;x<8;x++)//print minutes and seconds of time to flash hour
+           delay_milli(10);//delay 10 milliseconds
+
+           for(x = 0; x < 8; x++)//print minutes and seconds of time to flash hour
            {
                dataWrite(set_hour[x]);//print each digit of current time to LCD
-               delay_milli(100);//delay 100 milliseconds between digits
+               delay_milli(50);//delay 100 milliseconds between digits
            }
        }
        else if(ctrA == 2)
        {
            commandWrite(0x83);//command cursor to go to first line of LCD
-           delay_milli(100);//delay 100 milliseconds
-           for(x=0;x<8;x++)
+           delay_milli(10);//delay 10 milliseconds
+
+           for(x = 0; x < 8; x++)
            {
                dataWrite(set_min[x]);//print each digit of current time to LCD
-               delay_milli(100);//delay 100 milliseconds between digits
+               delay_milli(10);//delay 100 milliseconds between digits
            }
        }
 
        if(hours < 11)
        {
            commandWrite(0x8B);//command cursor to go to space beyond time
-           delay_milli(100);//delay 100 milliseconds
-           for(x=0;x<2;x++)//for loop to print AM
+           delay_milli(10);//delay 100 milliseconds
+           for(x = 0; x < 2; x++)//for loop to print AM
            {
                dataWrite(AM[x]);//print each letter to LCD
-               delay_milli(100);//delay 100 milliseconds between letters
+               delay_milli(50);//delay 100 milliseconds between letters
            }
        }
 
        else if(hours > 11 && hours < 24)
        {
            commandWrite(0x8B);//command cursor to go to space beyond time
-           delay_milli(100);//delay 100 milliseconds
-           for(x=0;x<2;x++)//for loop to print AM
+           delay_milli(10);//delay 100 milliseconds
+           for(x = 0; x < 2; x++)//for loop to print AM
            {
                dataWrite(PM[x]);//print each letter to LCD
-               delay_milli(100);//delay 100 milliseconds between letters
+               delay_milli(50);//delay 100 milliseconds between letters
            }
        }
 }
 /************************************************************************************************************************************************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
