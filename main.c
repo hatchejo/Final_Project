@@ -413,24 +413,27 @@ void alarm_off_func(void)
 /************************************************************************************************************************************************/
 
 
-
-//ALARM SNOOZE FUNCTION
+/*
+ * this function is used to print the alarm status 'SNOOZE' to the
+ * LCD screen on the second row
+ */
 /************************************************************************************************************************************************/
 void alarm_snooze_func(void)
 {
-    commandWrite(0xC6);
-        for(x=0; x<6; x++)
+    commandWrite(0xC6); //writes to the second row of the LCD screen
+        for(x=0; x<6; x++) //loop to iterate through array alarm_snooze
         {
-            dataWrite(alarm_snooze[x]);
+            dataWrite(alarm_snooze[x]); //display array for SNOOZE
         }
-        delay_milli(10);
+        delay_milli(10); //10 millisecond delay
 
 }
 /************************************************************************************************************************************************/
 
-
-
-/* ON BOARD BUTTON INTERRUPT CONFIGURATION */
+/*
+ * This Function does all the configuration steps for the interrupts to
+ * be used on the on-board buttons
+ */
 /************************************************************************************************************************************************/
     void button_speed_config(void)
     {
@@ -446,8 +449,10 @@ void alarm_snooze_func(void)
 /************************************************************************************************************************************************/
 
 
-
-/* INTERRUPT BUTTON CONFIGURATIONS */
+    /*
+     * This Function does all the configuration steps for the interrupts to
+     * be used on the off-board buttons
+     */
 /************************************************************************************************************************************************/
 void button_config(void) //SET Time buttons
 {
@@ -463,8 +468,9 @@ void button_config(void) //SET Time buttons
 /************************************************************************************************************************************************/
 
 
-
-/* RTC CONFIGURATION */
+/*
+ * This function does the RTC configuration steps
+ */
 /************************************************************************************************************************************************/
 void configRTC(void)
 {
@@ -484,8 +490,9 @@ void configRTC(void)
 
 
 
-
-/* PRINTS RTC TO LCD */
+/*
+ * This function prints the RTC to the LCD screen
+ */
 /************************************************************************************************************************************************/
 void printRTC(void)
 {
